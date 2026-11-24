@@ -1,0 +1,6 @@
+{
+  "name": "Party Karado",
+  "description": "Discover, map, book, and coordinate party venues with real-time slot availability, secure event payments, verified reviews, host messaging, push notifications, and English, Hindi, and Marathi support.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

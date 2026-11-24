@@ -1,0 +1,258 @@
+{
+  "entities": {
+    "AdminMarker": {
+      "title": "AdminMarker",
+      "description": "Marker document granting administrative privileges for venue management.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "email": { "type": "string", "minLength": 3, "maxLength": 120 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "createdAt"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Authenticated user account preferences, contact info, and saved venue references.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "displayName": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "email": { "type": "string", "minLength": 3, "maxLength": 120 },
+        "phone": { "type": "string", "minLength": 0, "maxLength": 20 },
+        "preferredCity": { "type": "string", "minLength": 0, "maxLength": 50 },
+        "preferredLanguage": { "type": "string", "enum": ["en", "hi", "mr"] },
+        "pushEnabled": { "type": "boolean" },
+        "bookingAlerts": { "type": "boolean" },
+        "messageAlerts": { "type": "boolean" },
+        "savedVenueIds": { "type": "array" },
+        "role": { "type": "string", "enum": ["guest", "host"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "displayName", "email", "phone", "preferredCity", "preferredLanguage", "pushEnabled", "bookingAlerts", "messageAlerts", "savedVenueIds", "role", "createdAt", "updatedAt"]
+    },
+    "Venue": {
+      "title": "Venue",
+      "description": "Admin-managed party venue listing with active status, capacity, hourly rate, coordinates, and amenities.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "hostId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "hostName": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "hostRoleLabel": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "name": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "nameHi": { "type": "string", "minLength": 2, "maxLength": 140 },
+        "nameMr": { "type": "string", "minLength": 2, "maxLength": 140 },
+        "category": { "type": "string", "enum": ["rooftop", "banquet", "poolside", "courtyard", "lawn", "lounge"] },
+        "city": { "type": "string", "enum": ["Mumbai", "Pune", "Thane", "Navi Mumbai"] },
+        "neighborhood": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "address": { "type": "string", "minLength": 5, "maxLength": 200 },
+        "lat": { "type": "number" },
+        "lng": { "type": "number" },
+        "capacityMin": { "type": "number" },
+        "capacityMax": { "type": "number" },
+        "hourlyRate": { "type": "number" },
+        "pricePerSlot": { "type": "number" },
+        "depositAmount": { "type": "number" },
+        "cleaningFee": { "type": "number" },
+        "amenities": { "type": "array" },
+        "description": { "type": "string", "minLength": 10, "maxLength": 1200 },
+        "descriptionHi": { "type": "string", "minLength": 10, "maxLength": 1500 },
+        "descriptionMr": { "type": "string", "minLength": 10, "maxLength": 1500 },
+        "imageUrl": { "type": "string", "minLength": 5, "maxLength": 300 },
+        "ratingAvg": { "type": "number" },
+        "reviewCount": { "type": "number" },
+        "rules": { "type": "string", "minLength": 0, "maxLength": 500 },
+        "isActive": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "hostId", "hostName", "hostRoleLabel", "name", "nameHi", "nameMr", "category", "city", "neighborhood", "address", "lat", "lng", "capacityMin", "capacityMax", "hourlyRate", "pricePerSlot", "depositAmount", "cleaningFee", "amenities", "description", "descriptionHi", "descriptionMr", "imageUrl", "ratingAvg", "reviewCount", "rules", "isActive", "createdAt", "updatedAt"]
+    },
+    "SlotLock": {
+      "title": "SlotLock",
+      "description": "Public real-time hourly lock preventing concurrent double bookings without exposing guest PII.",
+      "type": "object",
+      "properties": {
+        "venueId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "date": { "type": "string", "minLength": 10, "maxLength": 10, "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+        "hour": { "type": "number" },
+        "slot": { "type": "string", "enum": ["morning", "evening", "night", "fullday", "custom"] },
+        "bookingId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "userId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "status": { "type": "string", "enum": ["reserved", "confirmed"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["venueId", "date", "hour", "slot", "bookingId", "userId", "status", "createdAt"]
+    },
+    "Booking": {
+      "title": "Booking",
+      "description": "Public non-PII venue schedule reservation indexed by venueId and date for overlapping-hour availability checks.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "venueId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "venueName": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "venueNeighborhood": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "hostId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "userId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "eventType": { "type": "string", "enum": ["birthday", "sangeet", "anniversary", "corporate", "cocktail", "family"] },
+        "date": { "type": "string", "minLength": 10, "maxLength": 10, "pattern": "^\\d{4}-\\d{2}-\\d{2}$" },
+        "startHour": { "type": "number" },
+        "endHour": { "type": "number" },
+        "slot": { "type": "string", "enum": ["morning", "evening", "night", "fullday", "custom"] },
+        "slotLockIds": { "type": "array" },
+        "guestCount": { "type": "number" },
+        "baseAmount": { "type": "number" },
+        "cleaningFee": { "type": "number" },
+        "depositAmount": { "type": "number" },
+        "gstAmount": { "type": "number" },
+        "totalAmount": { "type": "number" },
+        "paymentStatus": { "type": "string", "enum": ["paid", "refunded"] },
+        "bookingStatus": { "type": "string", "enum": ["confirmed", "checked_in", "completed", "cancelled"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "venueId", "venueName", "venueNeighborhood", "hostId", "userId", "eventType", "date", "startHour", "endHour", "slot", "slotLockIds", "guestCount", "baseAmount", "cleaningFee", "depositAmount", "gstAmount", "totalAmount", "paymentStatus", "bookingStatus", "createdAt", "updatedAt"]
+    },
+    "BookingReceipt": {
+      "title": "BookingReceipt",
+      "description": "Strictly private guest contact PII and masked payment receipt paired atomically with a booking.",
+      "type": "object",
+      "properties": {
+        "bookingId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "userId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "hostId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "guestName": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "guestPhone": { "type": "string", "minLength": 7, "maxLength": 20 },
+        "guestEmail": { "type": "string", "minLength": 3, "maxLength": 120 },
+        "specialRequests": { "type": "string", "minLength": 0, "maxLength": 500 },
+        "paymentMethod": { "type": "string", "enum": ["upi", "card", "netbanking"] },
+        "paymentLast4": { "type": "string", "minLength": 0, "maxLength": 20 },
+        "transactionId": { "type": "string", "minLength": 6, "maxLength": 64 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["bookingId", "userId", "hostId", "guestName", "guestPhone", "guestEmail", "specialRequests", "paymentMethod", "paymentLast4", "transactionId", "createdAt"]
+    },
+    "Review": {
+      "title": "Review",
+      "description": "Verified guest review and sub-ratings for a venue.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "venueId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "bookingId": { "type": "string", "minLength": 0, "maxLength": 128 },
+        "userId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "authorName": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "rating": { "type": "number" },
+        "cleanlinessRating": { "type": "number" },
+        "ambienceRating": { "type": "number" },
+        "acousticsRating": { "type": "number" },
+        "hostRating": { "type": "number" },
+        "eventType": { "type": "string", "minLength": 2, "maxLength": 40 },
+        "comment": { "type": "string", "minLength": 5, "maxLength": 1000 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "venueId", "bookingId", "userId", "authorName", "rating", "cleanlinessRating", "ambienceRating", "acousticsRating", "hostRating", "eventType", "comment", "createdAt"]
+    },
+    "Conversation": {
+      "title": "Conversation",
+      "description": "Direct messaging thread between a party planner guest and a venue host.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 180, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "venueId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "venueName": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "guestId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "guestName": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "hostId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "hostName": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "lastMessage": { "type": "string", "minLength": 0, "maxLength": 300 },
+        "lastSenderId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "unreadByGuest": { "type": "number" },
+        "unreadByHost": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "venueId", "venueName", "guestId", "guestName", "hostId", "hostName", "lastMessage", "lastSenderId", "unreadByGuest", "unreadByHost", "createdAt", "updatedAt"]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "Single chat message inside a host-guest conversation.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "senderId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "senderName": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "senderRole": { "type": "string", "enum": ["guest", "host"] },
+        "text": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "senderId", "senderName", "senderRole", "text", "createdAt"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "Real-time reservation and messaging notification for a user.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "userId": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "type": { "type": "string", "enum": ["booking_confirmed", "booking_cancelled", "booking_updated", "host_message", "review_posted"] },
+        "title": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "titleHi": { "type": "string", "minLength": 2, "maxLength": 160 },
+        "titleMr": { "type": "string", "minLength": 2, "maxLength": 160 },
+        "body": { "type": "string", "minLength": 2, "maxLength": 300 },
+        "bodyHi": { "type": "string", "minLength": 2, "maxLength": 360 },
+        "bodyMr": { "type": "string", "minLength": 2, "maxLength": 360 },
+        "bookingId": { "type": "string", "minLength": 0, "maxLength": 128 },
+        "venueId": { "type": "string", "minLength": 0, "maxLength": 128 },
+        "read": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "userId", "type", "title", "titleHi", "titleMr", "body", "bodyHi", "bodyMr", "bookingId", "venueId", "read", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/admins/{adminId}": {
+      "schema": { "$ref": "#/entities/AdminMarker" },
+      "description": "Verified administrator lookup markers."
+    },
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Private user account profiles and notification/language preferences."
+    },
+    "/venues/{venueId}": {
+      "schema": { "$ref": "#/entities/Venue" },
+      "description": "Admin-managed party venue catalog listings."
+    },
+    "/slot_locks/{lockId}": {
+      "schema": { "$ref": "#/entities/SlotLock" },
+      "description": "Public real-time hourly slot availability locks keyed by venueId__date__h{hour}."
+    },
+    "/bookings/{bookingId}": {
+      "schema": { "$ref": "#/entities/Booking" },
+      "description": "Non-PII venue booking schedules queried by venueId and date for overlapping hour checks."
+    },
+    "/booking_receipts/{bookingId}": {
+      "schema": { "$ref": "#/entities/BookingReceipt" },
+      "description": "Private guest contact PII and masked payment receipt records."
+    },
+    "/reviews/{reviewId}": {
+      "schema": { "$ref": "#/entities/Review" },
+      "description": "Publicly readable verified venue ratings and guest reviews."
+    },
+    "/conversations/{conversationId}": {
+      "schema": { "$ref": "#/entities/Conversation" },
+      "description": "Host-guest coordination threads."
+    },
+    "/conversations/{conversationId}/messages/{messageId}": {
+      "schema": { "$ref": "#/entities/Message" },
+      "description": "Individual messages inside a host-guest coordination thread."
+    },
+    "/notifications/{notificationId}": {
+      "schema": { "$ref": "#/entities/Notification" },
+      "description": "User-targeted real-time push notification records."
+    }
+  }
+}

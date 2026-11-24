@@ -1,0 +1,531 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net (Default Deny)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Core Primitives
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isAdmin() {
+      return isVerified() && (
+        request.auth.token.admin == true ||
+        request.auth.token.email == 'leantester@gmail.com' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 180 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isSeedReviewId(reviewId) {
+      return reviewId in [
+        'rev-seed-1',
+        'rev-seed-2',
+        'rev-seed-3',
+        'rev-seed-4',
+        'rev-seed-5',
+        'rev-seed-6'
+      ];
+    }
+
+    // Validation Blueprints
+    function isValidUserProfile(data) {
+      return data.keys().hasAll([
+        'uid', 'displayName', 'email', 'phone', 'preferredCity',
+        'preferredLanguage', 'pushEnabled', 'bookingAlerts', 'messageAlerts',
+        'savedVenueIds', 'role', 'createdAt', 'updatedAt'
+      ]) && data.keys().hasOnly([
+        'uid', 'displayName', 'email', 'phone', 'preferredCity',
+        'preferredLanguage', 'pushEnabled', 'bookingAlerts', 'messageAlerts',
+        'savedVenueIds', 'role', 'createdAt', 'updatedAt'
+      ])
+      && isValidId(data.uid)
+      && data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 80
+      && data.email is string && data.email.size() >= 3 && data.email.size() <= 120
+      && data.phone is string && data.phone.size() <= 20
+      && data.preferredCity is string && data.preferredCity.size() <= 50
+      && data.preferredLanguage in ['en', 'hi', 'mr']
+      && data.pushEnabled is bool
+      && data.bookingAlerts is bool
+      && data.messageAlerts is bool
+      && data.savedVenueIds is list && data.savedVenueIds.size() <= 50
+      && (data.savedVenueIds.size() == 0 || data.savedVenueIds[0] is string)
+      && data.role in ['guest', 'host']
+      && data.createdAt is timestamp
+      && data.updatedAt is timestamp;
+    }
+
+    function isValidVenue(data) {
+      return data.keys().hasAll([
+        'id', 'hostId', 'hostName', 'hostRoleLabel', 'name', 'nameHi', 'nameMr',
+        'category', 'city', 'neighborhood', 'address', 'lat', 'lng',
+        'capacityMin', 'capacityMax', 'hourlyRate', 'pricePerSlot', 'depositAmount', 'cleaningFee',
+        'amenities', 'description', 'descriptionHi', 'descriptionMr',
+        'imageUrl', 'ratingAvg', 'reviewCount', 'rules', 'isActive', 'createdAt', 'updatedAt'
+      ]) && data.keys().hasOnly([
+        'id', 'hostId', 'hostName', 'hostRoleLabel', 'name', 'nameHi', 'nameMr',
+        'category', 'city', 'neighborhood', 'address', 'lat', 'lng',
+        'capacityMin', 'capacityMax', 'hourlyRate', 'pricePerSlot', 'depositAmount', 'cleaningFee',
+        'amenities', 'description', 'descriptionHi', 'descriptionMr',
+        'imageUrl', 'ratingAvg', 'reviewCount', 'rules', 'isActive', 'createdAt', 'updatedAt'
+      ])
+      && isValidId(data.id)
+      && isValidId(data.hostId)
+      && data.hostName is string && data.hostName.size() >= 1 && data.hostName.size() <= 80
+      && data.hostRoleLabel is string && data.hostRoleLabel.size() >= 1 && data.hostRoleLabel.size() <= 80
+      && data.name is string && data.name.size() >= 2 && data.name.size() <= 100
+      && data.nameHi is string && data.nameHi.size() >= 2 && data.nameHi.size() <= 140
+      && data.nameMr is string && data.nameMr.size() >= 2 && data.nameMr.size() <= 140
+      && data.category in ['rooftop', 'banquet', 'poolside', 'courtyard', 'lawn', 'lounge']
+      && data.city in ['Mumbai', 'Pune', 'Thane', 'Navi Mumbai']
+      && data.neighborhood is string && data.neighborhood.size() >= 2 && data.neighborhood.size() <= 80
+      && data.address is string && data.address.size() >= 5 && data.address.size() <= 200
+      && data.lat is number && data.lat >= -90 && data.lat <= 90
+      && data.lng is number && data.lng >= -180 && data.lng <= 180
+      && data.capacityMin is number && data.capacityMin >= 1 && data.capacityMin <= 5000
+      && data.capacityMax is number && data.capacityMax >= data.capacityMin && data.capacityMax <= 5000
+      && data.hourlyRate is number && data.hourlyRate >= 500 && data.hourlyRate <= 250000
+      && data.pricePerSlot is number && data.pricePerSlot >= 1000 && data.pricePerSlot <= 1000000
+      && data.depositAmount is number && data.depositAmount >= 0 && data.depositAmount <= 500000
+      && data.cleaningFee is number && data.cleaningFee >= 0 && data.cleaningFee <= 100000
+      && data.amenities is list && data.amenities.size() <= 15
+      && (data.amenities.size() == 0 || data.amenities[0] is string)
+      && data.description is string && data.description.size() >= 10 && data.description.size() <= 1200
+      && data.descriptionHi is string && data.descriptionHi.size() >= 10 && data.descriptionHi.size() <= 1500
+      && data.descriptionMr is string && data.descriptionMr.size() >= 10 && data.descriptionMr.size() <= 1500
+      && data.imageUrl is string && data.imageUrl.size() >= 5 && data.imageUrl.size() <= 300
+      && data.ratingAvg is number && data.ratingAvg >= 0 && data.ratingAvg <= 5
+      && data.reviewCount is number && data.reviewCount >= 0 && data.reviewCount <= 100000
+      && data.rules is string && data.rules.size() <= 500
+      && data.isActive is bool
+      && data.createdAt is timestamp
+      && data.updatedAt is timestamp;
+    }
+
+    function isValidSlotLock(data) {
+      return data.keys().hasAll(['venueId', 'date', 'hour', 'slot', 'bookingId', 'userId', 'status', 'createdAt'])
+      && data.keys().hasOnly(['venueId', 'date', 'hour', 'slot', 'bookingId', 'userId', 'status', 'createdAt'])
+      && isValidId(data.venueId)
+      && data.date is string && data.date.size() == 10 && data.date.matches('^\\d{4}-\\d{2}-\\d{2}$')
+      && data.hour is number && data.hour >= 0 && data.hour <= 23
+      && data.slot in ['morning', 'evening', 'night', 'fullday', 'custom']
+      && isValidId(data.bookingId)
+      && isValidId(data.userId)
+      && data.status in ['reserved', 'confirmed']
+      && data.createdAt is timestamp;
+    }
+
+    function isValidBooking(data) {
+      return data.keys().hasAll([
+        'id', 'venueId', 'venueName', 'venueNeighborhood', 'hostId', 'userId',
+        'eventType', 'date', 'startHour', 'endHour', 'slot', 'slotLockIds',
+        'guestCount', 'baseAmount', 'cleaningFee', 'depositAmount', 'gstAmount',
+        'totalAmount', 'paymentStatus', 'bookingStatus', 'createdAt', 'updatedAt'
+      ]) && data.keys().hasOnly([
+        'id', 'venueId', 'venueName', 'venueNeighborhood', 'hostId', 'userId',
+        'eventType', 'date', 'startHour', 'endHour', 'slot', 'slotLockIds',
+        'guestCount', 'baseAmount', 'cleaningFee', 'depositAmount', 'gstAmount',
+        'totalAmount', 'paymentStatus', 'bookingStatus', 'createdAt', 'updatedAt'
+      ])
+      && isValidId(data.id)
+      && isValidId(data.venueId)
+      && data.venueName is string && data.venueName.size() >= 1 && data.venueName.size() <= 100
+      && data.venueNeighborhood is string && data.venueNeighborhood.size() >= 1 && data.venueNeighborhood.size() <= 100
+      && isValidId(data.hostId)
+      && isValidId(data.userId)
+      && data.eventType in ['birthday', 'sangeet', 'anniversary', 'corporate', 'cocktail', 'family']
+      && data.date is string && data.date.size() == 10 && data.date.matches('^\\d{4}-\\d{2}-\\d{2}$')
+      && data.startHour is number && data.startHour >= 0 && data.startHour <= 23
+      && data.endHour is number && data.endHour > data.startHour && data.endHour <= 24
+      && data.slot in ['morning', 'evening', 'night', 'fullday', 'custom']
+      && data.slotLockIds is list && data.slotLockIds.size() >= 1 && data.slotLockIds.size() <= 24
+      && isValidId(data.slotLockIds[0])
+      && data.guestCount is number && data.guestCount >= 1 && data.guestCount <= 5000
+      && data.baseAmount is number && data.baseAmount >= 500
+      && data.cleaningFee is number && data.cleaningFee >= 0
+      && data.depositAmount is number && data.depositAmount >= 0
+      && data.gstAmount is number && data.gstAmount >= 0
+      && data.totalAmount is number && data.totalAmount >= 500
+      && data.paymentStatus in ['paid', 'refunded']
+      && data.bookingStatus in ['confirmed', 'checked_in', 'completed', 'cancelled']
+      && data.createdAt is timestamp
+      && data.updatedAt is timestamp;
+    }
+
+    function isValidBookingReceipt(data) {
+      return data.keys().hasAll([
+        'bookingId', 'userId', 'hostId', 'guestName', 'guestPhone', 'guestEmail',
+        'specialRequests', 'paymentMethod', 'paymentLast4', 'transactionId', 'createdAt'
+      ]) && data.keys().hasOnly([
+        'bookingId', 'userId', 'hostId', 'guestName', 'guestPhone', 'guestEmail',
+        'specialRequests', 'paymentMethod', 'paymentLast4', 'transactionId', 'createdAt'
+      ])
+      && isValidId(data.bookingId)
+      && isValidId(data.userId)
+      && isValidId(data.hostId)
+      && data.guestName is string && data.guestName.size() >= 2 && data.guestName.size() <= 80
+      && data.guestPhone is string && data.guestPhone.size() >= 7 && data.guestPhone.size() <= 20
+      && data.guestEmail is string && data.guestEmail.size() >= 3 && data.guestEmail.size() <= 120
+      && data.specialRequests is string && data.specialRequests.size() <= 500
+      && data.paymentMethod in ['upi', 'card', 'netbanking']
+      && data.paymentLast4 is string && data.paymentLast4.size() <= 20
+      && data.transactionId is string && data.transactionId.size() >= 6 && data.transactionId.size() <= 64
+      && data.createdAt is timestamp;
+    }
+
+    function isValidReview(data) {
+      return data.keys().hasAll([
+        'id', 'venueId', 'bookingId', 'userId', 'authorName', 'rating',
+        'cleanlinessRating', 'ambienceRating', 'acousticsRating', 'hostRating',
+        'eventType', 'comment', 'createdAt'
+      ]) && data.keys().hasOnly([
+        'id', 'venueId', 'bookingId', 'userId', 'authorName', 'rating',
+        'cleanlinessRating', 'ambienceRating', 'acousticsRating', 'hostRating',
+        'eventType', 'comment', 'createdAt'
+      ])
+      && isValidId(data.id)
+      && isValidId(data.venueId)
+      && data.bookingId is string && data.bookingId.size() <= 128
+      && isValidId(data.userId)
+      && data.authorName is string && data.authorName.size() >= 2 && data.authorName.size() <= 80
+      && data.rating is number && data.rating >= 1 && data.rating <= 5
+      && data.cleanlinessRating is number && data.cleanlinessRating >= 1 && data.cleanlinessRating <= 5
+      && data.ambienceRating is number && data.ambienceRating >= 1 && data.ambienceRating <= 5
+      && data.acousticsRating is number && data.acousticsRating >= 1 && data.acousticsRating <= 5
+      && data.hostRating is number && data.hostRating >= 1 && data.hostRating <= 5
+      && data.eventType is string && data.eventType.size() >= 2 && data.eventType.size() <= 40
+      && data.comment is string && data.comment.size() >= 5 && data.comment.size() <= 1000
+      && data.createdAt is timestamp;
+    }
+
+    function isValidConversation(data) {
+      return data.keys().hasAll([
+        'id', 'venueId', 'venueName', 'guestId', 'guestName',
+        'hostId', 'hostName', 'lastMessage', 'lastSenderId',
+        'unreadByGuest', 'unreadByHost', 'createdAt', 'updatedAt'
+      ]) && data.keys().hasOnly([
+        'id', 'venueId', 'venueName', 'guestId', 'guestName',
+        'hostId', 'hostName', 'lastMessage', 'lastSenderId',
+        'unreadByGuest', 'unreadByHost', 'createdAt', 'updatedAt'
+      ])
+      && isValidId(data.id)
+      && isValidId(data.venueId)
+      && data.venueName is string && data.venueName.size() >= 1 && data.venueName.size() <= 100
+      && isValidId(data.guestId)
+      && data.guestName is string && data.guestName.size() >= 1 && data.guestName.size() <= 80
+      && isValidId(data.hostId)
+      && data.hostName is string && data.hostName.size() >= 1 && data.hostName.size() <= 80
+      && data.lastMessage is string && data.lastMessage.size() <= 300
+      && isValidId(data.lastSenderId)
+      && data.unreadByGuest is number && data.unreadByGuest >= 0 && data.unreadByGuest <= 999
+      && data.unreadByHost is number && data.unreadByHost >= 0 && data.unreadByHost <= 999
+      && data.createdAt is timestamp
+      && data.updatedAt is timestamp;
+    }
+
+    function isValidMessage(data) {
+      return data.keys().hasAll(['id', 'senderId', 'senderName', 'senderRole', 'text', 'createdAt'])
+      && data.keys().hasOnly(['id', 'senderId', 'senderName', 'senderRole', 'text', 'createdAt'])
+      && isValidId(data.id)
+      && isValidId(data.senderId)
+      && data.senderName is string && data.senderName.size() >= 1 && data.senderName.size() <= 80
+      && data.senderRole in ['guest', 'host']
+      && data.text is string && data.text.size() >= 1 && data.text.size() <= 1000
+      && data.createdAt is timestamp;
+    }
+
+    function isValidNotification(data) {
+      return data.keys().hasAll([
+        'id', 'userId', 'type', 'title', 'titleHi', 'titleMr',
+        'body', 'bodyHi', 'bodyMr', 'bookingId', 'venueId', 'read', 'createdAt'
+      ]) && data.keys().hasOnly([
+        'id', 'userId', 'type', 'title', 'titleHi', 'titleMr',
+        'body', 'bodyHi', 'bodyMr', 'bookingId', 'venueId', 'read', 'createdAt'
+      ])
+      && isValidId(data.id)
+      && isValidId(data.userId)
+      && data.type in ['booking_confirmed', 'booking_cancelled', 'booking_updated', 'host_message', 'review_posted']
+      && data.title is string && data.title.size() >= 2 && data.title.size() <= 120
+      && data.titleHi is string && data.titleHi.size() >= 2 && data.titleHi.size() <= 160
+      && data.titleMr is string && data.titleMr.size() >= 2 && data.titleMr.size() <= 160
+      && data.body is string && data.body.size() >= 2 && data.body.size() <= 300
+      && data.bodyHi is string && data.bodyHi.size() >= 2 && data.bodyHi.size() <= 360
+      && data.bodyMr is string && data.bodyMr.size() >= 2 && data.bodyMr.size() <= 360
+      && data.bookingId is string && data.bookingId.size() <= 128
+      && data.venueId is string && data.venueId.size() <= 128
+      && data.read is bool
+      && data.createdAt is timestamp;
+    }
+
+    // 0. Admins (Lookup Only)
+    match /admins/{adminId} {
+      allow get: if isValidId(adminId) && isSignedIn() && (request.auth.uid == adminId || isAdmin());
+      allow list: if false;
+      allow create, update, delete: if false;
+    }
+
+    // 1. Users (PII Strictly Isolated)
+    match /users/{userId} {
+      allow get: if isValidId(userId) && isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow list: if isSignedIn() && (resource.data.uid == request.auth.uid || isAdmin());
+      allow create: if isValidId(userId)
+        && isVerified()
+        && request.auth.uid == userId
+        && isValidUserProfile(incoming())
+        && incoming().uid == request.auth.uid
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(userId)
+        && isVerified()
+        && isValidUserProfile(incoming())
+        && (request.auth.uid == userId || isAdmin())
+        && incoming().uid == existing().uid
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'displayName', 'phone', 'preferredCity', 'preferredLanguage',
+          'pushEnabled', 'bookingAlerts', 'messageAlerts', 'savedVenueIds', 'role', 'updatedAt'
+        ]);
+      allow delete: if false;
+    }
+
+    // 2. Venues (Public Non-PII Catalog, Strictly Admin-Only Writes)
+    match /venues/{venueId} {
+      allow get: if isValidId(venueId);
+      allow list: if true;
+      allow create: if isValidId(venueId)
+        && isAdmin()
+        && isValidVenue(incoming())
+        && incoming().id == venueId
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(venueId)
+        && isAdmin()
+        && isValidVenue(incoming())
+        && incoming().id == existing().id
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'name', 'nameHi', 'nameMr', 'category', 'city', 'neighborhood', 'address',
+          'lat', 'lng', 'capacityMin', 'capacityMax', 'hourlyRate', 'pricePerSlot',
+          'depositAmount', 'cleaningFee', 'amenities', 'description', 'descriptionHi',
+          'descriptionMr', 'imageUrl', 'rules', 'isActive', 'updatedAt'
+        ]);
+      allow delete: if isValidId(venueId) && isAdmin();
+    }
+
+    // 3. Slot Locks (Public Hourly Availability, Zero PII)
+    match /slot_locks/{lockId} {
+      allow get: if isValidId(lockId);
+      allow list: if true;
+      allow create: if isValidId(lockId)
+        && isVerified()
+        && isValidSlotLock(incoming())
+        && incoming().userId == request.auth.uid
+        && incoming().createdAt == request.time
+        && exists(/databases/$(database)/documents/venues/$(incoming().venueId))
+        && get(/databases/$(database)/documents/venues/$(incoming().venueId)).data.isActive == true
+        && !exists(/databases/$(database)/documents/slot_locks/$(lockId));
+      allow update: if false;
+      allow delete: if isValidId(lockId) && isVerified() && (existing().userId == request.auth.uid || isAdmin());
+    }
+
+    // 4. Bookings (Non-PII Schedule Queried by venueId & date, Atomic Transaction with slot_locks)
+    match /bookings/{bookingId} {
+      allow get: if isValidId(bookingId);
+      allow list: if true;
+      allow create: if isValidId(bookingId)
+        && isVerified()
+        && isValidBooking(incoming())
+        && incoming().id == bookingId
+        && incoming().userId == request.auth.uid
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time
+        && incoming().bookingStatus == 'confirmed'
+        && incoming().paymentStatus == 'paid'
+        && exists(/databases/$(database)/documents/venues/$(incoming().venueId))
+        && get(/databases/$(database)/documents/venues/$(incoming().venueId)).data.isActive == true
+        && existsAfter(/databases/$(database)/documents/slot_locks/$(incoming().slotLockIds[0]));
+      allow update: if isValidId(bookingId)
+        && isVerified()
+        && isValidBooking(incoming())
+        && incoming().id == existing().id
+        && incoming().userId == existing().userId
+        && incoming().hostId == existing().hostId
+        && incoming().venueId == existing().venueId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          isAdmin() ||
+          (
+            existing().bookingStatus != 'cancelled' && existing().bookingStatus != 'completed' && (
+              // Action: Guest or Host cancels booking
+              (
+                (existing().userId == request.auth.uid || existing().hostId == request.auth.uid)
+                && incoming().bookingStatus == 'cancelled'
+                && incoming().paymentStatus == 'refunded'
+                && incoming().diff(existing()).affectedKeys().hasOnly(['bookingStatus', 'paymentStatus', 'updatedAt'])
+              ) ||
+              // Action: Host advances check-in / completion status
+              (
+                existing().hostId == request.auth.uid
+                && incoming().bookingStatus in ['checked_in', 'completed']
+                && incoming().diff(existing()).affectedKeys().hasOnly(['bookingStatus', 'updatedAt'])
+              )
+            )
+          )
+        );
+      allow delete: if false;
+    }
+
+    // 4b. Private Booking Receipts (Owner, Host, or Admin Only PII)
+    match /booking_receipts/{bookingId} {
+      allow get: if isValidId(bookingId)
+        && isSignedIn()
+        && (existing().userId == request.auth.uid || existing().hostId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn()
+        && (resource.data.userId == request.auth.uid || resource.data.hostId == request.auth.uid || isAdmin());
+      allow create: if isValidId(bookingId)
+        && isVerified()
+        && isValidBookingReceipt(incoming())
+        && incoming().bookingId == bookingId
+        && incoming().userId == request.auth.uid
+        && incoming().createdAt == request.time
+        && existsAfter(/databases/$(database)/documents/bookings/$(bookingId));
+      allow update, delete: if false;
+    }
+
+    // 5. Reviews (Public Ratings & Feedback)
+    match /reviews/{reviewId} {
+      allow get: if isValidId(reviewId);
+      allow list: if true;
+      allow create: if isValidId(reviewId)
+        && isVerified()
+        && isValidReview(incoming())
+        && incoming().id == reviewId
+        && incoming().createdAt == request.time
+        && (
+          incoming().userId == request.auth.uid ||
+          isAdmin() ||
+          (isSeedReviewId(reviewId) && !exists(/databases/$(database)/documents/reviews/$(reviewId)))
+        )
+        && exists(/databases/$(database)/documents/venues/$(incoming().venueId));
+      allow update: if false;
+      allow delete: if isValidId(reviewId) && isVerified() && (existing().userId == request.auth.uid || isAdmin());
+    }
+
+    // 6. Conversations & Messages (Participant-Gated Coordination)
+    match /conversations/{conversationId} {
+      allow get: if isValidId(conversationId)
+        && isSignedIn()
+        && (existing().guestId == request.auth.uid || existing().hostId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn()
+        && (resource.data.guestId == request.auth.uid || resource.data.hostId == request.auth.uid || isAdmin());
+      allow create: if isValidId(conversationId)
+        && isVerified()
+        && isValidConversation(incoming())
+        && incoming().id == conversationId
+        && incoming().guestId == request.auth.uid
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time
+        && exists(/databases/$(database)/documents/venues/$(incoming().venueId));
+      allow update: if isValidId(conversationId)
+        && isVerified()
+        && isValidConversation(incoming())
+        && (existing().guestId == request.auth.uid || existing().hostId == request.auth.uid || isAdmin())
+        && incoming().id == existing().id
+        && incoming().guestId == existing().guestId
+        && incoming().hostId == existing().hostId
+        && incoming().venueId == existing().venueId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'lastMessage', 'lastSenderId', 'unreadByGuest', 'unreadByHost', 'updatedAt'
+        ]);
+      allow delete: if false;
+
+      match /messages/{messageId} {
+        allow get: if isValidId(conversationId) && isValidId(messageId)
+          && isSignedIn()
+          && (
+            get(/databases/$(database)/documents/conversations/$(conversationId)).data.guestId == request.auth.uid ||
+            get(/databases/$(database)/documents/conversations/$(conversationId)).data.hostId == request.auth.uid ||
+            isAdmin()
+          );
+        allow list: if isValidId(conversationId)
+          && isSignedIn()
+          && (
+            get(/databases/$(database)/documents/conversations/$(conversationId)).data.guestId == request.auth.uid ||
+            get(/databases/$(database)/documents/conversations/$(conversationId)).data.hostId == request.auth.uid ||
+            isAdmin()
+          );
+        allow create: if isValidId(conversationId) && isValidId(messageId)
+          && isVerified()
+          && isValidMessage(incoming())
+          && incoming().id == messageId
+          && incoming().senderId == request.auth.uid
+          && incoming().createdAt == request.time
+          && (
+            get(/databases/$(database)/documents/conversations/$(conversationId)).data.guestId == request.auth.uid ||
+            get(/databases/$(database)/documents/conversations/$(conversationId)).data.hostId == request.auth.uid ||
+            isAdmin()
+          );
+        allow update, delete: if false;
+      }
+    }
+
+    // 7. Notifications (Private User Alerts)
+    match /notifications/{notificationId} {
+      allow get: if isValidId(notificationId)
+        && isSignedIn()
+        && (existing().userId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn()
+        && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isValidId(notificationId)
+        && isVerified()
+        && isValidNotification(incoming())
+        && incoming().id == notificationId
+        && incoming().createdAt == request.time
+        && (
+          incoming().userId == request.auth.uid ||
+          isAdmin() ||
+          (
+            incoming().bookingId != '' &&
+            exists(/databases/$(database)/documents/bookings/$(incoming().bookingId)) &&
+            get(/databases/$(database)/documents/bookings/$(incoming().bookingId)).data.hostId == request.auth.uid &&
+            get(/databases/$(database)/documents/bookings/$(incoming().bookingId)).data.userId == incoming().userId
+          )
+        );
+      allow update: if isValidId(notificationId)
+        && isVerified()
+        && isValidNotification(incoming())
+        && existing().userId == request.auth.uid
+        && incoming().id == existing().id
+        && incoming().userId == existing().userId
+        && incoming().createdAt == existing().createdAt
+        && incoming().diff(existing()).affectedKeys().hasOnly(['read']);
+      allow delete: if isValidId(notificationId)
+        && isVerified()
+        && (existing().userId == request.auth.uid || isAdmin());
+    }
+  }
+}
